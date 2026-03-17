@@ -84,6 +84,12 @@ class YouTubeBrandCrawler:
                      print(f"WARNING: Invalid date format for 'published_after' ({self.published_after}). Ignoring filter.")
                      self.published_after = None
 
+        include_str = config.get('Crawler', 'include_channels', fallback='')
+        self.include_channels = [ch.strip().lower() for ch in include_str.split(',') if ch.strip()]
+        
+        exclude_str = config.get('Crawler', 'exclude_channels', fallback='')
+        self.exclude_channels = [ch.strip().lower() for ch in exclude_str.split(',') if ch.strip()]
+
         self.min_view_count = config.getint('Crawler', 'min_view_count')
         self.sort_by = config.get('Crawler', 'sort_by')
         self.max_results = config.getint('Crawler', 'max_results')
@@ -113,48 +119,77 @@ class YouTubeBrandCrawler:
         
         print(f"Executing combined search query: '{query}'")
         
+        target_channel_ids = []
+        if self.include_channels:
+            print(f"Resolving channel IDs for targeted search ({len(self.include_channels)} channels)...")
+            for ch_name in self.include_channels:
+                try:
+                    ch_resp = self.youtube_api.search().list(q=ch_name, type="channel", part="id,snippet", maxResults=1).execute()
+                    if ch_resp.get("items"):
+                        c_id = ch_resp["items"][0]["id"]["channelId"]
+                        c_title = ch_resp["items"][0]["snippet"]["title"]
+                        target_channel_ids.append(c_id)
+                        print(f"  - Resolved '{ch_name}' to {c_title} ({c_id})")
+                    else:
+                        print(f"  - Warning: Could not find channel matching '{ch_name}'")
+                except Exception as e:
+                    print(f"  - Error resolving channel '{ch_name}': {e}")
+            if not target_channel_ids:
+                print("Error: No provided include_channels could be resolved to a valid YouTube Channel ID. Exiting.")
+                return
+
         video_ids = set()
-        next_page_token = None
-        
-        # Prepare search arguments
-        search_kwargs = {
-            'q': query,
+        # Prepare base search arguments
+        search_kwargs_base = {
             'part': "id",
             'type': "video",
             'maxResults': 50,
             'regionCode': "BR",
         }
         
-        # Mapping sort_by config to API 'order' parameter
         if self.sort_by == 'date':
-            search_kwargs['order'] = 'date'
+            search_kwargs_base['order'] = 'date'
         elif self.sort_by == 'viewCount':
-             search_kwargs['order'] = 'viewCount'
-        # Default is relevance, which is what we want for 'relevance' and 'engagement' (since engagement is calculated locally)
-        
-        # Optimization: Only use videoDuration='short' if we strictly want Shorts.
-        # For 'videos', we must fetch everything because 'short' duration != Shorts format.
+            search_kwargs_base['order'] = 'viewCount'
+             
         if self.video_type == 'shorts':
-            search_kwargs['videoDuration'] = 'short'
+            search_kwargs_base['videoDuration'] = 'short'
         
         if self.published_after:
-            search_kwargs['publishedAfter'] = self.published_after
+            search_kwargs_base['publishedAfter'] = self.published_after
 
-        # Fetch multiple pages of results to get a wider selection
-        for _ in range(3): # Fetch up to 3 pages of results
-            try:
-                search_kwargs['pageToken'] = next_page_token
-                search_response = self.youtube_api.search().list(**search_kwargs).execute()
-                
-                for item in search_response.get("items", []):
-                    video_ids.add(item["id"]["videoId"])
-                
-                next_page_token = search_response.get('nextPageToken')
-                if not next_page_token:
-                    break # Exit if there are no more pages
-            except HttpError as e:
-                print(f"An HTTP error {e.resp.status} occurred:\n{e.content}")
-                break
+        def fetch_pages(search_q, channel_id=None):
+            next_page_token = None
+            v_ids = set()
+            for _ in range(3): # Fetch up to 3 pages per search
+                try:
+                    kwargs = search_kwargs_base.copy()
+                    kwargs["q"] = search_q
+                    kwargs["pageToken"] = next_page_token
+                    
+                    if channel_id:
+                        kwargs["channelId"] = channel_id
+                        
+                    search_response = self.youtube_api.search().list(**kwargs).execute()
+                    
+                    for item in search_response.get("items", []):
+                        v_ids.add(item["id"]["videoId"])
+                    
+                    next_page_token = search_response.get('nextPageToken')
+                    if not next_page_token:
+                        break # Exit if there are no more pages
+                except HttpError as e:
+                    print(f"An HTTP error {e.resp.status} occurred:\n{e.content}")
+                    break
+            return v_ids
+
+        if target_channel_ids:
+            print(f"\nTargeting specific channels for videos...")
+            for c_id in target_channel_ids:
+                video_ids.update(fetch_pages(query, c_id))
+        else:
+            print("\nSearching globally for videos...")
+            video_ids.update(fetch_pages(query))
 
         if not video_ids:
             print("No videos found matching the search criteria. Exiting.")
@@ -227,9 +262,15 @@ class YouTubeBrandCrawler:
 
         for video in tqdm(video_details, desc=desc):
             title = video["snippet"]["title"]
+            channel_title = video["snippet"]["channelTitle"]
+            published_at = video["snippet"]["publishedAt"]
             
-            # 1. Filter by excluded keywords
+            # 1. Filter by excluded keywords in title
             if any(keyword in title.lower() for keyword in self.exclude_keywords):
+                continue
+
+            # 1a. Filter by excluded channels dynamically
+            if self.exclude_channels and any(exc_ch in channel_title.lower() for exc_ch in self.exclude_channels):
                 continue
 
             stats = video.get("statistics", {})
@@ -255,7 +296,8 @@ class YouTubeBrandCrawler:
                 "video_id": video["id"],
                 "title": title,
                 "url": f"https://www.youtube.com/watch?v={video['id']}",
-                "channel": video["snippet"]["channelTitle"],
+                "channel": channel_title,
+                "date": published_at,
                 "views": view_count,
                 "likes": like_count,
                 "comments": comment_count,
@@ -274,7 +316,10 @@ class YouTubeBrandCrawler:
         elif self.sort_by == 'engagement':
             return df.sort_values(by="engagement", ascending=False).reset_index(drop=True)
         elif self.sort_by == 'date':
-            return df.sort_values(by="published_at", ascending=False).reset_index(drop=True)
+            df['parsed_date'] = pd.to_datetime(df['date'])
+            df = df.sort_values(by="parsed_date", ascending=False).reset_index(drop=True)
+            df = df.drop(columns=['parsed_date'])
+            return df
         else: # Default to relevance (which is the default API return order, so no-op)
             return df
 

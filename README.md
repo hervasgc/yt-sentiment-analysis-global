@@ -60,7 +60,9 @@ This project performs a comprehensive sentiment analysis of a brand on YouTube u
     - **Advanced Filtering & Sorting:**
         - `video_type`: Filter by format. Options: `shorts`, `videos`, or `both`.
         - `published_after`: Only analyze videos posted after a specific date (Format: `YYYY-MM-DD`).
-        - `sort_by`: Order results by `relevance`, `viewCount`, `engagement`, or `date` (latest first).
+        - `include_channels`: Optionally restrict the search to specific creators (e.g. `CazeTV, Desimpedidos`).
+        - `exclude_channels`: Optionally exclude specific creators.
+        - `sort_by`: The crawler defaults to YouTube's relevance, but you can change `sort_by` to `date` to organize videos from newest to oldest, `viewCount`, or `engagement`.
         - `max_results`: Limit the number of videos to analyze (e.g., 100).
 
 ## Usage
