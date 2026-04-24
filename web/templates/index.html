@@ -294,6 +294,38 @@
             display: block;
         }
 
+        /* Report Button */
+        #report-container {
+            margin-top: 1.5rem;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .view-report-btn {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .view-report-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 600px) {
             .grid-layout {
                 grid-template-columns: 1fr;
@@ -441,6 +473,9 @@
             <div id="steps-list">
                 <!-- Steps will be injected here -->
             </div>
+            <div id="report-container">
+                <a href="#" id="view-report-link" target="_blank" class="view-report-btn">Visualizar Relatório Estratégico</a>
+            </div>
         </div>
     </div>
 
@@ -463,18 +498,22 @@
             const formData = new FormData(e.target);
 
             try {
+                // Show tracker immediately with empty state
+                document.getElementById('status-tracker').style.display = 'block';
+                document.getElementById('steps-list').innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">Iniciando conexão com a nuvem...</div>';
+                document.getElementById('report-container').style.display = 'none';
+
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 });
-
+                
                 const data = await response.json();
-
                 resultDiv.style.display = 'block';
                 if (response.ok) {
                     resultDiv.className = 'success';
-                    resultDiv.innerHTML = `<strong>Sucesso!</strong> Configuração salva.<br>ID: <code>${data.execution_id}</code><br>Inicie a análise no terminal para acompanhar aqui.`;
-
+                    resultDiv.innerHTML = `<strong>Sucesso!</strong> ${data.message}<br>ID da Execução: <code>${data.execution_id}</code>`;
+                    
                     // Start polling status
                     startStatusPolling(data.execution_id);
                 } else {
@@ -505,7 +544,15 @@
 
                     if (data.steps) {
                         renderSteps(data.steps);
-
+                        
+                        // Check if we have a report URL
+                        if (data.report_url) {
+                            const reportContainer = document.getElementById('report-container');
+                            const reportLink = document.getElementById('view-report-link');
+                            reportLink.href = data.report_url;
+                            reportContainer.style.display = 'block';
+                        }
+                        
                         // Check if complete or error
                         const isComplete = data.steps.complete && data.steps.complete.status === 'success';
                         const hasError = Object.values(data.steps).some(s => s.status === 'error');

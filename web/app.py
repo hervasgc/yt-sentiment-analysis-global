@@ -163,14 +163,14 @@ def start_analysis():
         # We don't wait for the operation to complete, we return immediately
         
         return jsonify({
-            "message": "Analysis job started successfully!", 
+            "message": "Análise iniciada com sucesso na nuvem!", 
             "execution_id": execution_id,
             "operation_id": operation.operation.name
         })
         
     except Exception as e:
         import traceback
-        return jsonify({"error": f"Failed to start job: {str(e)}", "traceback": traceback.format_exc()}), 500
+        return jsonify({"error": f"Falha ao iniciar o job: {str(e)}", "traceback": traceback.format_exc()}), 500
 
 @app.route('/status/<execution_id>', methods=['GET'])
 def get_status(execution_id):
@@ -183,8 +183,28 @@ def get_status(execution_id):
     
     if not status:
         return jsonify({"status": "starting", "steps": {}})
-        
+    
+    # Check if complete to provide the report filename
+    if status['steps'].get('complete', {}).get('status') == 'success':
+        # Look for the HTML file in the outputs directory
+        # The file is usually search_terms_strategic_report.html
+        import glob
+        html_files = glob.glob(os.path.join(exec_dir, "*_report.html"))
+        if html_files:
+            status['report_url'] = f"/report/{execution_id}"
+
     return jsonify(status)
+
+@app.route('/report/<execution_id>')
+def serve_report(execution_id):
+    exec_dir = os.path.join(OUTPUTS_DIR, "executions", execution_id)
+    import glob
+    html_files = glob.glob(os.path.join(exec_dir, "*_report.html"))
+    if not html_files:
+        return "Relatório não encontrado", 404
+    
+    from flask import send_file
+    return send_file(html_files[0])
 
 if __name__ == '__main__':
     # Cloud Run provides the PORT environment variable
