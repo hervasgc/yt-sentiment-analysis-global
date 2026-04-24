@@ -28,6 +28,11 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def start_analysis():
+    # Extract user email from IAP header if present
+    user_email = request.headers.get("X-Goog-Authenticated-User-Email", "Local User")
+    if ":" in user_email:
+        user_email = user_email.split(":")[1]
+
     # Form extraction
     search_terms = request.form.get('search_terms')
     search_modifiers = request.form.get('search_modifiers', '')
