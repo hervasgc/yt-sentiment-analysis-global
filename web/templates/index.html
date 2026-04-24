@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,7 +26,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
                 radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
             color: var(--text-main);
@@ -154,7 +155,7 @@
             display: none;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 1s ease-in-out infinite;
@@ -162,7 +163,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         #result-message {
@@ -185,8 +188,124 @@
             border: 1px solid rgba(239, 68, 68, 0.2);
             color: #f87171;
         }
+
+        /* New Grid Layouts */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .three-cols {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #60a5fa;
+            border-left: 4px solid #60a5fa;
+            padding-left: 12px;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Status Tracker UI */
+        #status-tracker {
+            margin-top: 2rem;
+            display: none;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .step-item.active {
+            opacity: 1;
+            transform: translateX(5px);
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--text-muted);
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .step-item.running .step-icon {
+            border-color: var(--primary-color);
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        .step-item.success .step-icon {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .step-item.success .step-icon::after {
+            content: '✓';
+        }
+
+        .step-item.error .step-icon {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .step-item.error .step-icon::after {
+            content: '✕';
+        }
+
+        .step-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .step-message {
+            font-size: 0.8rem;
+            color: #ef4444;
+            margin-left: 36px;
+            display: none;
+        }
+
+        .step-item.error .step-message {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .glass-container {
+                padding: 1.5rem;
+            }
+        }
     </style>
 </head>
+
 <body>
 
     <div class="glass-container">
@@ -194,29 +313,118 @@
             <h1>Brand Analytics</h1>
             <p class="subtitle">Análise global de sentimento no YouTube</p>
             <div class="user-badge">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z">
+                    </path>
+                </svg>
                 Logado como: {{ user_email }}
             </div>
         </header>
 
         <form id="analysis-form">
-            <div class="form-group">
-                <label for="search_terms">Termos de Busca (ex: Copa do Mundo)</label>
-                <input type="text" id="search_terms" name="search_terms" placeholder="Digite a marca ou termo..." required>
+            <div class="section-title">Configurações de Busca (Crawler)</div>
+
+            <div class="grid-layout">
+                <div class="form-group">
+                    <label for="search_terms">Termo Principal</label>
+                    <input type="text" id="search_terms" name="search_terms" placeholder="ex: Copa do Mundo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="search_modifiers">Modificadores</label>
+                    <input type="text" id="search_modifiers" name="search_modifiers" placeholder="ex: futebol, gols">
+                </div>
+            </div>
+
+            <div class="grid-layout three-cols">
+                <div class="form-group">
+                    <label for="max_results">Máx. Vídeos</label>
+                    <input type="number" id="max_results" name="max_results" value="10" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="region_code">Região (ISO)</label>
+                    <input type="text" id="region_code" name="region_code" value="BR" placeholder="ex: BR, US">
+                </div>
+                <div class="form-group">
+                    <label for="sort_by">Ordenar por</label>
+                    <select id="sort_by" name="sort_by">
+                        <option value="relevance">Relevância</option>
+                        <option value="viewCount">Visualizações</option>
+                        <option value="engagement">Engajamento</option>
+                        <option value="date">Data</option>
+                    </select>
+                </div>
             </div>
 
             <div class="form-group">
-                <label for="max_results">Máximo de Vídeos a Analisar</label>
-                <input type="number" id="max_results" name="max_results" value="10" min="1" max="500">
+                <label for="exclude_keywords">Palavras para Excluir (separadas por vírgula)</label>
+                <input type="text" id="exclude_keywords" name="exclude_keywords" placeholder="ex: shorts, ads, oficial">
+            </div>
+
+            <div class="grid-layout">
+                <div class="form-group">
+                    <label for="video_type">Tipo de Conteúdo</label>
+                    <select id="video_type" name="video_type">
+                        <option value="both">Vídeos + Shorts</option>
+                        <option value="videos">Apenas Vídeos</option>
+                        <option value="shorts">Apenas Shorts</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="published_after">Publicado após (AAAA-MM-DD)</label>
+                    <input type="text" id="published_after" name="published_after" placeholder="ex: 2024-01-01">
+                </div>
+            </div>
+
+            <div class="grid-layout">
+                <div class="form-group">
+                    <label for="include_channels">Incluir Canais (Opcional)</label>
+                    <input type="text" id="include_channels" name="include_channels" placeholder="ex: Canal1, Canal2">
+                </div>
+                <div class="form-group">
+                    <label for="exclude_channels">Excluir Canais (Opcional)</label>
+                    <input type="text" id="exclude_channels" name="exclude_channels" placeholder="ex: CanalX">
+                </div>
             </div>
 
             <div class="form-group">
-                <label for="video_type">Tipo de Conteúdo</label>
-                <select id="video_type" name="video_type">
-                    <option value="both">Vídeos Normais + Shorts</option>
-                    <option value="videos">Apenas Vídeos Normais</option>
-                    <option value="shorts">Apenas Shorts</option>
-                </select>
+                <label for="min_view_count">Mínimo de Visualizações</label>
+                <input type="number" id="min_view_count" name="min_view_count" value="10000">
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-title">Configurações de IA (Análise)</div>
+
+            <div class="grid-layout">
+                <div class="form-group">
+                    <label for="pro_model_name">Modelo Síntese (Pro)</label>
+                    <select id="pro_model_name" name="pro_model_name">
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash lite</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash lite</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="flash_model_name">Modelo Batch (Flash)</label>
+                    <select id="flash_model_name" name="flash_model_name">
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash lite</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash lite</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-layout">
+                <div class="form-group">
+                    <label for="batch_size">Vídeos por Lote</label>
+                    <input type="number" id="batch_size" name="batch_size" value="3" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="report_format">Formato do Relatório</label>
+                    <select id="report_format" name="report_format">
+                        <option value="html">HTML Interativo</option>
+                        <option value="markdown">Markdown (Relatório Puro)</option>
+                    </select>
+                </div>
             </div>
 
             <button type="submit" class="submit-btn" id="submit-btn">
@@ -226,17 +434,25 @@
         </form>
 
         <div id="result-message"></div>
+
+        <!-- Status Tracker Container -->
+        <div id="status-tracker">
+            <div class="section-title" style="font-size: 1rem; margin-bottom: 1rem;">Progresso da Análise</div>
+            <div id="steps-list">
+                <!-- Steps will be injected here -->
+            </div>
+        </div>
     </div>
 
     <script>
         document.getElementById('analysis-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const btn = document.getElementById('submit-btn');
             const spinner = document.getElementById('spinner');
             const btnText = btn.querySelector('span');
             const resultDiv = document.getElementById('result-message');
-            
+
             // UI Loading state
             btn.disabled = true;
             spinner.style.display = 'block';
@@ -251,13 +467,16 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 resultDiv.style.display = 'block';
                 if (response.ok) {
                     resultDiv.className = 'success';
-                    resultDiv.innerHTML = `<strong>Sucesso!</strong> Job disparado na nuvem.<br>ID da Execução: <code>${data.execution_id}</code><br>Você pode acompanhar o progresso no console do Google Cloud ou verificar os relatórios no Cloud Storage mais tarde.`;
+                    resultDiv.innerHTML = `<strong>Sucesso!</strong> Configuração salva.<br>ID: <code>${data.execution_id}</code><br>Inicie a análise no terminal para acompanhar aqui.`;
+
+                    // Start polling status
+                    startStatusPolling(data.execution_id);
                 } else {
                     resultDiv.className = 'error';
                     resultDiv.innerHTML = `<strong>Erro:</strong> ${data.error}`;
@@ -273,6 +492,64 @@
                 btnText.textContent = 'Iniciar Análise';
             }
         });
+
+        function startStatusPolling(executionId) {
+            const tracker = document.getElementById('status-tracker');
+            const stepsList = document.getElementById('steps-list');
+            tracker.style.display = 'block';
+
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/status/${executionId}`);
+                    const data = await response.json();
+
+                    if (data.steps) {
+                        renderSteps(data.steps);
+
+                        // Check if complete or error
+                        const isComplete = data.steps.complete && data.steps.complete.status === 'success';
+                        const hasError = Object.values(data.steps).some(s => s.status === 'error');
+
+                        if (!isComplete && !hasError) {
+                            setTimeout(poll, 2000);
+                        }
+                    } else {
+                        setTimeout(poll, 2000);
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                    setTimeout(poll, 5000);
+                }
+            };
+
+            poll();
+        }
+
+        function renderSteps(steps) {
+            const stepsList = document.getElementById('steps-list');
+            stepsList.innerHTML = '';
+
+            const order = ['crawl', 'download', 'comments', 'audio', 'analyze', 'complete'];
+
+            order.forEach(id => {
+                const step = steps[id];
+                if (!step) return;
+
+                const item = document.createElement('div');
+                item.className = `step-item ${step.status}`;
+                if (step.status === 'running' || step.status === 'success') item.classList.add('active');
+
+                item.innerHTML = `
+                    <div class="step-icon"></div>
+                    <div class="step-content">
+                        <div class="step-label">${step.label}</div>
+                        <div class="step-message">${step.message || ''}</div>
+                    </div>
+                `;
+                stepsList.appendChild(item);
+            });
+        }
     </script>
 </body>
+
 </html>

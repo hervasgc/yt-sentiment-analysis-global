@@ -45,46 +45,72 @@ def main():
         print(f"Error: Configuration file '{config_path}' not found.")
         return
     
+    # Initialize Status Tracker if in execution mode
+    tracker = None
+    if execution_id and base_output_dir:
+        from src.status_tracker import StatusTracker
+        tracker = StatusTracker(base_output_dir)
+
     try:
         if args.step in ['all', 'crawl']:
             print("\n" + "="*40)
             print(" STEP 1: CRAWLING VIDEOS ")
             print("="*40)
+            if tracker: tracker.update_step("crawl", "running")
             crawler = YouTubeBrandCrawler(config_path=config_path, output_dir=base_output_dir)
             crawler.run_crawler()
+            if tracker: tracker.update_step("crawl", "success")
             
         if args.step in ['all', 'download']:
             print("\n" + "="*40)
             print(" STEP 2: DOWNLOADING VIDEOS ")
             print("="*40)
+            if tracker: tracker.update_step("download", "running")
             downloader = VideoDownloader(config_path=config_path, output_dir=base_output_dir)
             downloader.download_videos()
+            if tracker: tracker.update_step("download", "success")
             
         if args.step in ['all', 'comments']:
             print("\n" + "="*40)
             print(" STEP 3: EXTRACTING COMMENTS ")
             print("="*40)
+            if tracker: tracker.update_step("comments", "running")
             extractor = YouTubeCommentExtractor(config_path=config_path, output_dir=base_output_dir)
             extractor.extract_comments()
+            if tracker: tracker.update_step("comments", "success")
 
-        if args.step == 'audio':
+        if args.step == 'audio' or (args.step == 'all' and os.path.exists(config_path)):
+            # Only run audio if needed (usually part of analyze or explicitly asked)
             print("\n" + "="*40)
             print(" EXTRA STEP: EXTRACTING AUDIO ")
             print("="*40)
+            if tracker: tracker.update_step("audio", "running")
             extractor = AudioExtractor(config_path=config_path, output_dir=base_output_dir)
             extractor.extract_audio()
+            if tracker: tracker.update_step("audio", "success")
             
         if args.step in ['all', 'analyze']:
             print("\n" + "="*40)
             print(" STEP 4: RUNNING ANALYSIS PIPELINE ")
             print("="*40)
+            if tracker: tracker.update_step("analyze", "running")
             pipeline = CachedAnalysisPipeline(config_path=config_path, output_dir=base_output_dir)
             pipeline.run_pipeline()
+            if tracker: tracker.update_step("analyze", "success")
+            if tracker: tracker.update_step("complete", "success")
             
     except Exception as e:
+        if tracker:
+            # Try to identify which step failed
+            for step_id, info in tracker.steps.items():
+                if info["status"] == "running":
+                    tracker.update_step(step_id, "error", message=str(e))
         print(f"\nAn error occurred during execution: {e}")
         import traceback
         traceback.print_exc()
 
 if __name__ == "__main__":
     main()
+
+
+#primeito deploy com secrets criados
