@@ -20,7 +20,7 @@ class YouTubeCommentExtractor:
     """
     A class to extract comments from YouTube videos.
     """
-    def __init__(self, config_path, env_path=None):
+    def __init__(self, config_path, env_path=None, output_dir=None):
         """Initializes the extractor by loading configuration and API keys."""
         print("Initializing YouTube Comment Extractor...")
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +29,7 @@ class YouTubeCommentExtractor:
             env_path = os.path.join(self.project_root, '.env')
             
         self._load_environment_variables(env_path)
-        self._load_configuration(config_path)
+        self._load_configuration(config_path, output_dir)
         self.youtube_api = build("youtube", "v3", developerKey=self.youtube_api_key)
         print("SUCCESS: YouTube API service built.")
 
@@ -41,7 +41,7 @@ class YouTubeCommentExtractor:
             raise ValueError("YouTube API key must be set in the .env file.")
         print("SUCCESS: Environment variables loaded.")
 
-    def _load_configuration(self, config_path):
+    def _load_configuration(self, config_path, output_dir_override=None):
         """Loads settings from the config file."""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
@@ -52,8 +52,12 @@ class YouTubeCommentExtractor:
         brand_name = config.get('Crawler', 'search_terms')
         safe_brand_name = re.sub(r'\W+', '', brand_name.replace(' ', '_'))
         
-        self.input_csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
-        self.output_csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_raw_comments.csv")
+        if output_dir_override:
+            self.input_csv_path = os.path.join(output_dir_override, f"{safe_brand_name}_discovered_videos.csv")
+            self.output_csv_path = os.path.join(output_dir_override, f"{safe_brand_name}_raw_comments.csv")
+        else:
+            self.input_csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
+            self.output_csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_raw_comments.csv")
         self.max_comments_per_video = config.getint('Crawler', 'max_results', fallback=100) # Reuse max_results for comments
 
     def extract_comments(self):

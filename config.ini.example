@@ -16,7 +16,7 @@ exclude_channels =
 min_view_count = 100000
 # Options: relevance, viewCount, engagement, date
 sort_by = relevance
-max_results = 100
+max_results = 10
 
 [AudioExtractor]
 # --- Configuration for the Audio Extractor ---

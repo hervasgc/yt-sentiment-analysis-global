@@ -20,13 +20,13 @@ import time
 import random
 
 class VideoDownloader:
-    def __init__(self, config_path):
+    def __init__(self, config_path, output_dir=None):
         """Initializes the downloader by loading configuration."""
         print("Initializing Video Downloader...")
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self._load_configuration(config_path)
+        self._load_configuration(config_path, output_dir)
 
-    def _load_configuration(self, config_path):
+    def _load_configuration(self, config_path, output_dir_override=None):
         """Loads settings from the config file."""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
@@ -38,10 +38,14 @@ class VideoDownloader:
         safe_brand_name = re.sub(r'\W+', '', brand_name.replace(' ', '_'))
         
         # Use project_root for paths
-        self.csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
-        # Default to 'video' folder
-        video_folder_name = config.get('VideoDownloader', 'video_folder_name', fallback='video')
-        self.output_dir = os.path.join(self.project_root, 'outputs', safe_brand_name, video_folder_name)
+        if output_dir_override:
+            self.csv_path = os.path.join(output_dir_override, f"{safe_brand_name}_discovered_videos.csv")
+            video_folder_name = config.get('VideoDownloader', 'video_folder_name', fallback='video')
+            self.output_dir = os.path.join(output_dir_override, video_folder_name)
+        else:
+            self.csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
+            video_folder_name = config.get('VideoDownloader', 'video_folder_name', fallback='video')
+            self.output_dir = os.path.join(self.project_root, 'outputs', safe_brand_name, video_folder_name)
 
     def download_videos(self):
         """
@@ -101,6 +105,7 @@ class VideoDownloader:
                     video_url,
                     '--no-js-runtimes',
                     '--js-runtimes', 'node',
+                    '--remote-components', 'ejs:github',
                     '--extractor-args', 'youtube:player_client=tv,default'
                 ]
                 

@@ -1,6 +1,7 @@
 # Virtual Environment
 venv/
 env/
+.venv/
 .env
 
 # Python
@@ -23,3 +24,7 @@ outputs/
 # IDEs
 .vscode/
 .idea/
+.DS_Store
+
+# Temporary/Scratch
+scratch/

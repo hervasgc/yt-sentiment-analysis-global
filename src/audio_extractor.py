@@ -22,13 +22,13 @@ import re
 import sys
 
 class AudioExtractor:
-    def __init__(self, config_path):
+    def __init__(self, config_path, output_dir=None):
         """Initializes the extractor by loading configuration."""
         print("Initializing Audio Extractor...")
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self._load_configuration(config_path)
+        self._load_configuration(config_path, output_dir)
 
-    def _load_configuration(self, config_path):
+    def _load_configuration(self, config_path, output_dir_override=None):
         """Loads settings from the config file."""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
@@ -39,9 +39,14 @@ class AudioExtractor:
         brand_name = config.get('Crawler', 'search_terms')
         safe_brand_name = re.sub(r'\W+', '', brand_name.replace(' ', '_'))
         
-        self.csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
-        audio_folder_name = config.get('AudioExtractor', 'audio_folder_name', fallback='audio')
-        self.output_dir = os.path.join(self.project_root, 'outputs', safe_brand_name, audio_folder_name)
+        if output_dir_override:
+            self.csv_path = os.path.join(output_dir_override, f"{safe_brand_name}_discovered_videos.csv")
+            audio_folder_name = config.get('AudioExtractor', 'audio_folder_name', fallback='audio')
+            self.output_dir = os.path.join(output_dir_override, audio_folder_name)
+        else:
+            self.csv_path = os.path.join(self.project_root, 'outputs', safe_brand_name, f"{safe_brand_name}_discovered_videos.csv")
+            audio_folder_name = config.get('AudioExtractor', 'audio_folder_name', fallback='audio')
+            self.output_dir = os.path.join(self.project_root, 'outputs', safe_brand_name, audio_folder_name)
 
     def extract_audio(self):
         """

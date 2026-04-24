@@ -30,7 +30,7 @@ class YouTubeBrandCrawler:
     """
     A class to crawl YouTube for brand-related user-generated content.
     """
-    def __init__(self, config_path=None, env_path=None):
+    def __init__(self, config_path=None, env_path=None, output_dir=None):
         """Initializes the crawler by loading configuration and API keys."""
         print("Initializing YouTube Brand Crawler...")
         
@@ -42,7 +42,7 @@ class YouTubeBrandCrawler:
             env_path = os.path.join(self.project_root, '.env')
             
         self._load_environment_variables(env_path)
-        self._load_configuration(config_path)
+        self._load_configuration(config_path, output_dir)
         self.youtube_api = build("youtube", "v3", developerKey=self.youtube_api_key)
 
     def _load_environment_variables(self, env_path):
@@ -53,7 +53,7 @@ class YouTubeBrandCrawler:
             raise ValueError("YouTube API key must be set in the .env file.")
         print("SUCCESS: Environment variables loaded.")
 
-    def _load_configuration(self, config_path):
+    def _load_configuration(self, config_path, output_dir_override=None):
         """Loads settings from the [Crawler] section of config.ini."""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
@@ -97,7 +97,14 @@ class YouTubeBrandCrawler:
 
         # --- Brand-Specific Output Path (BUG FIX) ---
         safe_brand_name = re.sub(r'\W+', '', self.search_terms.replace(' ', '_'))
-        self.output_dir = os.path.join('outputs', safe_brand_name)
+        
+        if output_dir_override:
+            # If an explicit output_dir is provided (e.g. for Cloud Run Job), use it
+            self.output_dir = output_dir_override
+        else:
+            # Default to project-relative outputs folder
+            self.output_dir = os.path.join(self.project_root, 'outputs', safe_brand_name)
+            
         self.output_path = os.path.join(self.output_dir, f"{safe_brand_name}_discovered_videos.csv")
         os.makedirs(self.output_dir, exist_ok=True)
         

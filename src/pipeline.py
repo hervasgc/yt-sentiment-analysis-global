@@ -28,12 +28,12 @@ class CachedAnalysisPipeline:
     """
     Orchestrates the two-stage analysis pipeline.
     """
-    def __init__(self, config_path):
+    def __init__(self, config_path, output_dir=None):
         print("Initializing Cached Analysis Pipeline...")
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.config_path = config_path
         self._load_environment_variables()
-        self._load_configuration()
+        self._load_configuration(output_dir)
         
         genai.configure(api_key=self.google_api_key)
         print("SUCCESS: Google AI SDK configured.")
@@ -44,7 +44,8 @@ class CachedAnalysisPipeline:
         if not self.google_api_key:
             raise ValueError("GEMINI_API_KEY must be set in the .env file.")
 
-    def _load_configuration(self):
+    def _load_configuration(self, output_dir_override=None):
+        """Loads settings from the config file."""
         config = configparser.ConfigParser()
         config.read(self.config_path)
         
@@ -59,7 +60,11 @@ class CachedAnalysisPipeline:
         self.batch_size = config.getint('Analysis', 'batch_size')
         self.report_format = config.get('Analysis', 'report_format')
         
-        self.output_dir = os.path.join(self.project_root, 'outputs', self.safe_brand_name)
+        if output_dir_override:
+            self.output_dir = output_dir_override
+        else:
+            self.output_dir = os.path.join(self.project_root, 'outputs', self.safe_brand_name)
+            
         self.videos_csv_path = os.path.join(self.output_dir, f"{self.safe_brand_name}_discovered_videos.csv")
         self.comments_csv_path = os.path.join(self.output_dir, f"{self.safe_brand_name}_raw_comments.csv")
         self.audio_dir = os.path.join(self.output_dir, config.get('AudioExtractor', 'audio_folder_name', fallback='audio'))

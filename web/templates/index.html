@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Sentiment Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: rgba(30, 41, 59, 0.7);
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .glass-container {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .user-badge svg {
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
+            color: #10b981;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        button.submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button.submit-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        button.submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #result-message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            display: none;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-container">
+        <header>
+            <h1>Brand Analytics</h1>
+            <p class="subtitle">Análise global de sentimento no YouTube</p>
+            <div class="user-badge">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Logado como: {{ user_email }}
+            </div>
+        </header>
+
+        <form id="analysis-form">
+            <div class="form-group">
+                <label for="search_terms">Termos de Busca (ex: Copa do Mundo)</label>
+                <input type="text" id="search_terms" name="search_terms" placeholder="Digite a marca ou termo..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="max_results">Máximo de Vídeos a Analisar</label>
+                <input type="number" id="max_results" name="max_results" value="10" min="1" max="500">
+            </div>
+
+            <div class="form-group">
+                <label for="video_type">Tipo de Conteúdo</label>
+                <select id="video_type" name="video_type">
+                    <option value="both">Vídeos Normais + Shorts</option>
+                    <option value="videos">Apenas Vídeos Normais</option>
+                    <option value="shorts">Apenas Shorts</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submit-btn">
+                <span>Iniciar Análise</span>
+                <div class="spinner" id="spinner"></div>
+            </button>
+        </form>
+
+        <div id="result-message"></div>
+    </div>
+
+    <script>
+        document.getElementById('analysis-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-btn');
+            const spinner = document.getElementById('spinner');
+            const btnText = btn.querySelector('span');
+            const resultDiv = document.getElementById('result-message');
+            
+            // UI Loading state
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            btnText.textContent = 'Disparando Job...';
+            resultDiv.style.display = 'none';
+            resultDiv.className = '';
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.style.display = 'block';
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `<strong>Sucesso!</strong> Job disparado na nuvem.<br>ID da Execução: <code>${data.execution_id}</code><br>Você pode acompanhar o progresso no console do Google Cloud ou verificar os relatórios no Cloud Storage mais tarde.`;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `<strong>Erro:</strong> ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<strong>Erro de rede:</strong> Não foi possível contatar o servidor.`;
+            } finally {
+                // Reset UI
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = 'Iniciar Análise';
+            }
+        });
+    </script>
+</body>
+</html>

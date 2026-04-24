@@ -19,53 +19,66 @@ def main():
     print("!"*60 + "\n")
 
     parser = argparse.ArgumentParser(description="Sentiment Analysis Pipeline")
-    parser.add_argument('step', choices=['all', 'crawl', 'download', 'comments', 'audio', 'analyze'], 
+    parser.add_argument('step', nargs='?', default='all', choices=['all', 'crawl', 'download', 'comments', 'audio', 'analyze'], 
                         help="The step of the pipeline to run.")
-    parser.add_argument('--config', default='config.ini', help="Path to configuration file.")
+    parser.add_argument('--config', default=None, help="Path to configuration file.")
     
     args = parser.parse_args()
     
-    # Ensure config path is absolute or correctly relative
-    if not os.path.exists(args.config):
-        print(f"Error: Configuration file '{args.config}' not found.")
+    # Check for Cloud Run Job Execution ID
+    execution_id = os.environ.get("EXECUTION_ID")
+    outputs_dir = os.environ.get("OUTPUTS_DIR", os.path.join(os.path.dirname(__file__), 'outputs'))
+    
+    if args.config:
+        config_path = os.path.abspath(args.config)
+        base_output_dir = None # Let components decide or use default
+    elif execution_id:
+        base_output_dir = os.path.join(outputs_dir, "executions", execution_id)
+        config_path = os.path.join(base_output_dir, "config.ini")
+        print(f"Using Cloud Run Execution Context: {base_output_dir}")
+    else:
+        config_path = os.path.abspath('config.ini')
+        base_output_dir = None
+
+    # Ensure config path exists
+    if not os.path.exists(config_path):
+        print(f"Error: Configuration file '{config_path}' not found.")
         return
-        
-    config_path = os.path.abspath(args.config)
     
     try:
         if args.step in ['all', 'crawl']:
             print("\n" + "="*40)
             print(" STEP 1: CRAWLING VIDEOS ")
             print("="*40)
-            crawler = YouTubeBrandCrawler(config_path=config_path)
+            crawler = YouTubeBrandCrawler(config_path=config_path, output_dir=base_output_dir)
             crawler.run_crawler()
             
         if args.step in ['all', 'download']:
             print("\n" + "="*40)
             print(" STEP 2: DOWNLOADING VIDEOS ")
             print("="*40)
-            downloader = VideoDownloader(config_path=config_path)
+            downloader = VideoDownloader(config_path=config_path, output_dir=base_output_dir)
             downloader.download_videos()
             
         if args.step in ['all', 'comments']:
             print("\n" + "="*40)
             print(" STEP 3: EXTRACTING COMMENTS ")
             print("="*40)
-            extractor = YouTubeCommentExtractor(config_path=config_path)
+            extractor = YouTubeCommentExtractor(config_path=config_path, output_dir=base_output_dir)
             extractor.extract_comments()
 
         if args.step == 'audio':
             print("\n" + "="*40)
             print(" EXTRA STEP: EXTRACTING AUDIO ")
             print("="*40)
-            extractor = AudioExtractor(config_path=config_path)
+            extractor = AudioExtractor(config_path=config_path, output_dir=base_output_dir)
             extractor.extract_audio()
             
         if args.step in ['all', 'analyze']:
             print("\n" + "="*40)
             print(" STEP 4: RUNNING ANALYSIS PIPELINE ")
             print("="*40)
-            pipeline = CachedAnalysisPipeline(config_path=config_path)
+            pipeline = CachedAnalysisPipeline(config_path=config_path, output_dir=base_output_dir)
             pipeline.run_pipeline()
             
     except Exception as e:
