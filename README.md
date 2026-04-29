@@ -1,31 +1,35 @@
-# YouTube Sentiment Analysis
+# YouTube Sentiment Analysis & Presentation Generator
 
-(THIS IS NOT AN OFFICIAL GOOGLE TOOL) 
+(THIS IS NOT AN OFFICIAL GOOGLE TOOL)
 
-This project performs a comprehensive sentiment analysis of a brand on YouTube using Google's Gemini AI. It crawls for relevant videos, extracts comments and audio, and generates a strategic report summarizing brand perception.
+This project performs a comprehensive sentiment analysis of a brand on YouTube using Google's Gemini AI. It crawls for relevant videos, extracts comments, analyzes sentiment, and generates both a strategic report (HTML) and a full presentation deck (Images & PDF).
+
+It now features a user-friendly **Streamlit web interface** and uses parallel processing for faster execution.
 
 ## ⚠️ Disclaimer
 
 **Please read this carefully before using this tool.**
 
 1.  **Terms of Service Compliance:** This tool automates interactions with YouTube. Users are strictly responsible for ensuring their usage complies with [YouTube's Terms of Service](https://www.youtube.com/t/terms).
-2.  **Cookie Usage:** This tool may require the use of browser cookies (`cookies.txt`) to access certain content (e.g., age-restricted videos) or to avoid bot detection. By providing your cookies, you are authorizing this script to act on your behalf. **Do not share your `cookies.txt` file with anyone.**
-3.  **Rate Limiting:** Aggressive scraping can lead to IP bans or account restrictions. This tool is intended for personal research and analysis, not for high-volume data harvesting.
+2.  **Rate Limiting:** Aggressive scraping can lead to IP bans or account restrictions. This tool is intended for personal research and analysis, not for high-volume data harvesting.
 
+## Features
+
+-   **Web UI**: Run the entire pipeline from a clean Streamlit interface.
+-   **No Downloads Required**: Uses Gemini's direct video understanding capabilities via URLs.
+-   **Parallel Processing**: Analyzes video batches in parallel to save time.
+-   **Automatic Presentation**: Generates full slides with text using Gemini's image generation (Nano Banana).
+-   **Export Options**: Download reports as HTML and presentations as PDF.
+-   **Customization**: Set target language and provide custom context to guide the AI analysis.
 
 ## Project Structure
 
-- **`src/`**: Contains the core Python scripts for crawling, downloading, extracting comments/audio, and analysis.
-- **`templates/`**: Contains HTML templates for reports and text prompts for Gemini.
-- **`outputs/`**: Generated data (CSVs, audio/video files) and final reports are stored here.
-- **`config.ini`**: Configuration file for search terms, models, and paths.
-
-## Prerequisites
-
-- Python 3.8+
-- A Google Cloud Project with the **YouTube Data API v3** enabled.
-- A Google AI Studio API Key for **Gemini**.
-- `yt-dlp` (installed automatically via requirements, but ensures you have ffmpeg installed on your system for audio extraction).
+-   **`app.py`**: The Streamlit web application.
+-   **`main.py`**: The CLI entry point for running steps manually.
+-   **`src/`**: Core Python scripts for crawling, analysis, and generation.
+-   **`templates/`**: HTML templates for reports and text prompts for Gemini.
+-   **`outputs/`**: Generated data (CSVs, reports, slides, PDFs).
+-   **`config.ini`**: Configuration file for search terms, models, and limits.
 
 ## Setup
 
@@ -41,71 +45,56 @@ This project performs a comprehensive sentiment analysis of a brand on YouTube u
     ```
 
 3.  **Configure Environment Variables:**
-    - Copy `.env.example` to `.env`:
+    -   Copy `.env.example` to `.env`:
         ```bash
         cp .env.example .env
         ```
-    - Open `.env` and add your API keys:
+    -   Open `.env` and add your YouTube API key (Gemini key is hardcoded in this version for convenience):
         ```env
-        GEMINI_API_KEY=your_gemini_api_key
         YOUTUBE_API_KEY=your_youtube_api_key
         ```
 
-4.  **Configure the Analysis:**
-    - Copy `config.ini.example` to `config.ini` (if not already present):
-        ```bash
-        cp config.ini.example config.ini
-        ```
-    - Open `config.ini` and set your `search_terms`, `models`, and other preferences.
-    - **Advanced Filtering & Sorting:**
-        - `video_type`: Filter by format. Options: `shorts`, `videos`, or `both`.
-        - `published_after`: Only analyze videos posted after a specific date (Format: `YYYY-MM-DD`).
-        - `include_channels`: Optionally restrict the search to specific creators (e.g. `CazeTV, Desimpedidos`).
-        - `exclude_channels`: Optionally exclude specific creators.
-        - `sort_by`: The crawler defaults to YouTube's relevance, but you can change `sort_by` to `date` to organize videos from newest to oldest, `viewCount`, or `engagement`.
-        - `max_results`: Limit the number of videos to analyze (e.g., 100).
-
 ## Usage
 
+### Option A: Streamlit Web Interface (Recommended)
+Run the following command to start the local web server:
+```bash
+streamlit run app.py
+```
+Open your browser at the provided URL (usually `http://localhost:8501`) to configure and run the pipeline.
+
+### Option B: Command Line Interface (CLI)
 You can run the entire pipeline or individual steps using `main.py`.
 
-### Run the Full Pipeline
-This will crawl videos, download them, extract comments, and generate the report.
+#### Run the Full Pipeline
+This will crawl videos, extract comments, run the analysis, and generate the presentation.
 ```bash
 python main.py all
 ```
 
-### Run Individual Steps
-
-1.  **Crawl Videos:** Finds relevant videos based on your search terms.
+#### Run Individual Steps
+1.  **Crawl Videos:**
     ```bash
     python main.py crawl
     ```
-
-2.  **Download Videos:** Downloads video/audio for the found videos.
-    ```bash
-    python main.py download
-    ```
-
-3.  **Extract Comments:** Fetches comments for the found videos.
+2.  **Extract Comments:**
     ```bash
     python main.py comments
     ```
-
-4.  **Extract Audio (Optional):** Explicitly extracts audio (usually handled by download step).
-    ```bash
-    python main.py audio
-    ```
-
-5.  **Run Analysis:** Uses Gemini to analyze the data and generate the report.
+3.  **Run Analysis:** Generates the strategic report.
     ```bash
     python main.py analyze
+    ```
+4.  **Generate Slides:** Generates the presentation images and PDF.
+    ```bash
+    python main.py slides
     ```
 
 ## Outputs
 
 All outputs are saved in the `outputs/<brand_name>/` directory:
-- `*_discovered_videos.csv`: List of videos found.
-- `*_raw_comments.csv`: Extracted comments.
-- `*_strategic_report.html`: The final analysis report.
-- `audio/` & `video/`: Temporary media files (cleaned up after analysis).
+-   `*_discovered_videos.csv`: List of videos found.
+-   `*_raw_comments.csv`: Extracted comments.
+-   `*_strategic_report.html`: The final analysis report.
+-   `*_deck.html`: Interactive presentation viewer.
+-   `*_presentation.pdf`: Combined slides in PDF format.
